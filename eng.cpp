@@ -21,12 +21,10 @@ enum {
 constexpr int white = 0;
 constexpr int black = 1;
 
-
 // Bit macros
 #define SET_BIT(bitboard, square) (bitboard |= (1ULL << square))
 #define GET_BIT(bitboard, square) (bitboard & (1ULL << square))
 #define POP_BIT(bitboard, square) (GET_BIT(bitboard, square) ? bitboard ^= (1ULL << square) : 0)
-
 
 void printBoard(U64 bitboard){
     for (int rank = 0; rank < 8; rank++ ){
@@ -49,7 +47,7 @@ void printBoard(U64 bitboard){
 
 }
 
-// not file constants numbers generated --> represent file as 0
+// not file constants numbers generated -> represent file as 0
 constexpr U64 NOT_A_FILE = 18374403900871474942ULL;
 constexpr U64 NOT_H_FILE = 9187201950435737471ULL;
 constexpr U64 NOT_HG_FILE = 4557430888798830399ULL;
@@ -166,6 +164,112 @@ U64 maskBishopAttacks(int square){
     return attacks;
 }
 
+U64 maskRookAttacks(int square){
+    U64 attacks = 0ULL;
+
+    int rank, file;
+    int targetRank = square / 8;
+    int targetFile = square % 8;
+
+    rank = targetRank + 1;
+    while (rank < 7){
+        attacks |= (1ULL << (rank * 8 + targetFile));
+        rank++;
+    }
+    rank = targetRank - 1;
+    while (rank > 0){
+        attacks |= (1ULL << (rank * 8 + targetFile));
+        rank--;
+    }
+
+    file = targetFile + 1;
+    while (file < 7){
+        attacks |= (1ULL << (targetRank * 8 + file));
+        file++;
+    }
+    file = targetFile - 1;
+    while (file > 0){
+        attacks |= (1ULL << (targetRank * 8 + file));
+        file--;
+    }
+
+    return attacks;
+}
+
+U64 realBishopAttacks(int square, U64 blockers){
+    U64 attacks = 0ULL;
+
+    int rank, file;
+    int targetRank = square / 8;
+    int targetFile = square % 8;
+
+    rank = targetRank + 1, file = targetFile + 1;
+    while (rank <= 7 && file <= 7){
+        attacks |= (1ULL << (rank * 8 + file));
+        if ((1ULL << (rank * 8 + file) & blockers)) break;
+        rank++, file++;
+    }
+
+    rank = targetRank - 1, file = targetFile + 1;
+    while (rank >= 0 && file <= 7){
+        attacks |= (1ULL << (rank * 8 + file));
+        if ((1ULL << (rank * 8 + file) & blockers)) break;
+        rank--, file++;
+    }
+    
+    rank = targetRank + 1, file = targetFile - 1; 
+    while (rank <= 7 && file >= 0){
+        attacks |= (1ULL << (rank * 8 + file));
+        if ((1ULL << (rank * 8 + file) & blockers)) break;
+        rank++, file--;
+    }
+
+    rank = targetRank - 1, file = targetFile - 1; 
+    while (rank >= 0 && file >= 0){
+        attacks |= (1ULL << (rank * 8 + file));
+        if ((1ULL << (rank * 8 + file) & blockers)) break;
+        rank--, file--;
+    }
+
+    return attacks;
+}
+
+U64 realRookAttacks(int square, U64 blockers){
+    U64 attacks = 0ULL;
+
+    int rank, file;
+    int targetRank = square / 8;
+    int targetFile = square % 8;
+
+    rank = targetRank + 1;
+    while (rank <= 7){
+        attacks |= (1ULL << (rank * 8 + targetFile));
+        if ((1ULL << (rank * 8 + targetFile)) & blockers) break;
+        rank++;
+    }
+    rank = targetRank - 1;
+    while (rank >= 0){
+        attacks |= (1ULL << (rank * 8 + targetFile));
+        if ((1ULL << (rank * 8 + targetFile)) & blockers) break;
+        rank--;
+    }
+
+    file = targetFile + 1;
+    while (file <= 7){
+        attacks |= (1ULL << (targetRank * 8 + file));
+        if ((1ULL << (targetRank * 8 + file)) & blockers) break;
+        file++;
+    }
+    file = targetFile - 1;
+    while (file >= 0){
+        attacks |= (1ULL << (targetRank * 8 + file));
+        if ((1ULL << (targetRank * 8 + file)) & blockers) break;
+        file--;
+    }
+
+    return attacks;
+}
+
 
 void initLeaperAttacks(){
 
@@ -181,16 +285,18 @@ void initLeaperAttacks(){
 
 }
 
+
+
 int main(){
 
     // generate attack tables
     initLeaperAttacks();
 
-    //printBoard(maskBishopAttacks(d4));
+    printBoard(realRookAttacks(d4, 0ULL));
 
-    for (int square = 0; square < 64; square++){
-        printBoard(maskBishopAttacks(square));
-    } 
+    /* for (int square = 0; square < 64; square++){
+        printBoard(maskRookAttacks(square));
+    }  */
 
     return 0;
 }
