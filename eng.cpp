@@ -18,6 +18,17 @@ enum {
     a1, b1, c1, d1, e1, f1, g1, h1
 };
 
+constexpr const char* const coords[] = {
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+};
+
 constexpr int white = 0;
 constexpr int black = 1;
 
@@ -25,6 +36,17 @@ constexpr int black = 1;
 #define SET_BIT(bitboard, square) (bitboard |= (1ULL << square))
 #define GET_BIT(bitboard, square) (bitboard & (1ULL << square))
 #define POP_BIT(bitboard, square) (GET_BIT(bitboard, square) ? bitboard ^= (1ULL << square) : 0)
+#define COUNT_BITS(bitboard) __builtin_popcountll(bitboard)
+#define GET_LEAST_SIG_BIT_IND(bitboard) ((bitboard) ? __builtin_ctzll(bitboard) : -1)
+
+// static inline int bitCounter(U64 bitboard){
+//     int count = 0;
+//     while (bitboard > 0){  
+//         count++;
+//         bitboard &= bitboard - 1;
+//     } 
+//     return count;
+// }
 
 void printBoard(U64 bitboard){
     for (int rank = 0; rank < 8; rank++ ){
@@ -271,6 +293,7 @@ U64 realRookAttacks(int square, U64 blockers){
 }
 
 
+
 void initLeaperAttacks(){
 
     for (int square = 0; square < 64; square++){
@@ -292,11 +315,21 @@ int main(){
     // generate attack tables
     initLeaperAttacks();
 
-    printBoard(realRookAttacks(d4, 0ULL));
+    //printBoard(realRookAttacks(d4, 0ULL));
+    
+    U64 block = 0ULL;
+    SET_BIT(block, d7);
+    SET_BIT(block, a2);
+    SET_BIT(block, b3);
 
-    /* for (int square = 0; square < 64; square++){
-        printBoard(maskRookAttacks(square));
-    }  */
+    printBoard(block);
+
+    std::cout << "\nindex: " << GET_LEAST_SIG_BIT_IND(block) << "\ncoordinates: " << coords[GET_LEAST_SIG_BIT_IND(block)];
+
+   // U64 test = 0ULL;
+   // SET_BIT(test, GET_LEAST_SIG_BIT_IND(block));
+
+   // printBoard(test);
 
     return 0;
 }
