@@ -18,7 +18,7 @@ enum {
     a1, b1, c1, d1, e1, f1, g1, h1
 };
 
-constexpr const char* const coords[] = {
+const char* const coords[] = {
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
     "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
@@ -29,8 +29,8 @@ constexpr const char* const coords[] = {
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
 };
 
-constexpr int white = 0;
-constexpr int black = 1;
+const int white = 0;
+const int black = 1;
 
 // Bit macros
 #define SET_BIT(bitboard, square) (bitboard |= (1ULL << square))
@@ -38,15 +38,6 @@ constexpr int black = 1;
 #define POP_BIT(bitboard, square) (GET_BIT(bitboard, square) ? bitboard ^= (1ULL << square) : 0)
 #define COUNT_BITS(bitboard) __builtin_popcountll(bitboard)
 #define GET_LEAST_SIG_BIT_IND(bitboard) ((bitboard) ? __builtin_ctzll(bitboard) : -1)
-
-// static inline int bitCounter(U64 bitboard){
-//     int count = 0;
-//     while (bitboard > 0){  
-//         count++;
-//         bitboard &= bitboard - 1;
-//     } 
-//     return count;
-// }
 
 void printBoard(U64 bitboard){
     for (int rank = 0; rank < 8; rank++ ){
@@ -70,10 +61,34 @@ void printBoard(U64 bitboard){
 }
 
 // not file constants numbers generated -> represent file as 0
-constexpr U64 NOT_A_FILE = 18374403900871474942ULL;
-constexpr U64 NOT_H_FILE = 9187201950435737471ULL;
-constexpr U64 NOT_HG_FILE = 4557430888798830399ULL;
-constexpr U64 NOT_AB_FILE = 18229723555195321596ULL;
+const U64 NOT_A_FILE = 18374403900871474942ULL;
+const U64 NOT_H_FILE = 9187201950435737471ULL;
+const U64 NOT_HG_FILE = 4557430888798830399ULL;
+const U64 NOT_AB_FILE = 18229723555195321596ULL;
+
+const int bishopRelBits[64] = {
+    6, 5, 5, 5, 5, 5, 5, 6, 
+    5, 5, 5, 5, 5, 5, 5, 5, 
+    5, 5, 7, 7, 7, 7, 5, 5, 
+    5, 5, 7, 9, 9, 7, 5, 5, 
+    5, 5, 7, 9, 9, 7, 5, 5, 
+    5, 5, 7, 7, 7, 7, 5, 5, 
+    5, 5, 5, 5, 5, 5, 5, 5, 
+    6, 5, 5, 5, 5, 5, 5, 6
+};
+
+const int rook_relevant_bits[64] = {
+    12, 11, 11, 11, 11, 11, 11, 12, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    11, 10, 10, 10, 10, 10, 10, 11, 
+    12, 11, 11, 11, 11, 11, 11, 12
+};
+
+
 
 U64 pawnAttack[2][64];
 U64 knightAttack[64];
@@ -292,8 +307,6 @@ U64 realRookAttacks(int square, U64 blockers){
     return attacks;
 }
 
-
-
 void initLeaperAttacks(){
 
     for (int square = 0; square < 64; square++){
@@ -308,6 +321,18 @@ void initLeaperAttacks(){
 
 }
 
+U64 setOccupancy(int index, int maskBits, U64 attackMask){
+
+    U64 occupancy = 0ULL;
+
+    for (int count = 0; count < maskBits; count++){
+        int square = GET_LEAST_SIG_BIT_IND(attackMask);
+        POP_BIT(attackMask, square);
+        if (index & (1 << count)) occupancy |= (1ULL << square);
+    }
+
+    return occupancy;
+}
 
 
 int main(){
@@ -315,21 +340,10 @@ int main(){
     // generate attack tables
     initLeaperAttacks();
 
-    //printBoard(realRookAttacks(d4, 0ULL));
+    U64 attackM = maskRookAttacks(a1);
+    U64 occ = setOccupancy(4095, COUNT_BITS(attackM), attackM);
     
-    U64 block = 0ULL;
-    SET_BIT(block, d7);
-    SET_BIT(block, a2);
-    SET_BIT(block, b3);
-
-    printBoard(block);
-
-    std::cout << "\nindex: " << GET_LEAST_SIG_BIT_IND(block) << "\ncoordinates: " << coords[GET_LEAST_SIG_BIT_IND(block)];
-
-   // U64 test = 0ULL;
-   // SET_BIT(test, GET_LEAST_SIG_BIT_IND(block));
-
-   // printBoard(test);
+    printBoard(occ);
 
     return 0;
 }
