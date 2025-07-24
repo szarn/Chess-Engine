@@ -334,16 +334,44 @@ U64 setOccupancy(int index, int maskBits, U64 attackMask){
     return occupancy;
 }
 
+// magic number generators
+unsigned int ranState = 1804289383;
+
+unsigned int getRandomU32(){
+    unsigned int number = ranState;
+
+    number ^= number << 13;
+    number ^= number >> 17;
+    number ^= number << 5;
+
+    ranState = number;
+    
+    return ranState;
+}
+
+U64 getRandomU64(){
+
+    U64 n1, n2, n3, n4;
+
+    n1 = (U64)(getRandomU32() & 0xFFFF);
+    n2 = (U64)(getRandomU32() & 0xFFFF);
+    n3 = (U64)(getRandomU32() & 0xFFFF);
+    n4 = (U64)(getRandomU32() & 0xFFFF);
+
+    return n1 | (n2 << 16) | (n3 << 32) | (n4 << 48);
+}
+
+U64 genMagicNum(){
+    return getRandomU64() & getRandomU64() & getRandomU64();
+}
+
 
 int main(){
 
     // generate attack tables
     initLeaperAttacks();
-
-    U64 attackM = maskRookAttacks(a1);
-    U64 occ = setOccupancy(4095, COUNT_BITS(attackM), attackM);
     
-    printBoard(occ);
+    printBoard(genMagicNum());
 
     return 0;
 }
