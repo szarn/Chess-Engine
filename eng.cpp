@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <string.h>
 
 // Bitboard 64 Bit dec
 typedef unsigned long long  U64;
@@ -31,6 +32,9 @@ const char* const coords[] = {
 
 const int white = 0;
 const int black = 1;
+
+const int rook = 0;
+const int bishop = 1;
 
 // Bit macros
 #define SET_BIT(bitboard, square) (bitboard |= (1ULL << square))
@@ -77,7 +81,7 @@ const int bishopRelBits[64] = {
     6, 5, 5, 5, 5, 5, 5, 6
 };
 
-const int rook_relevant_bits[64] = {
+const int rookRelBits[64] = {
     12, 11, 11, 11, 11, 11, 11, 12, 
     11, 10, 10, 10, 10, 10, 10, 11, 
     11, 10, 10, 10, 10, 10, 10, 11, 
@@ -88,7 +92,138 @@ const int rook_relevant_bits[64] = {
     12, 11, 11, 11, 11, 11, 11, 12
 };
 
-
+U64 rookMagicNums[64] = {
+    0x8a80104000800020ULL,
+    0x140002000100040ULL,
+    0x2801880a0017001ULL,
+    0x100081001000420ULL,
+    0x200020010080420ULL,
+    0x3001c0002010008ULL,
+    0x8480008002000100ULL,
+    0x2080088004402900ULL,
+    0x800098204000ULL,
+    0x2024401000200040ULL,
+    0x100802000801000ULL,
+    0x120800800801000ULL,
+    0x208808088000400ULL,
+    0x2802200800400ULL,
+    0x2200800100020080ULL,
+    0x801000060821100ULL,
+    0x80044006422000ULL,
+    0x100808020004000ULL,
+    0x12108a0010204200ULL,
+    0x140848010000802ULL,
+    0x481828014002800ULL,
+    0x8094004002004100ULL,
+    0x4010040010010802ULL,
+    0x20008806104ULL,
+    0x100400080208000ULL,
+    0x2040002120081000ULL,
+    0x21200680100081ULL,
+    0x20100080080080ULL,
+    0x2000a00200410ULL,
+    0x20080800400ULL,
+    0x80088400100102ULL,
+    0x80004600042881ULL,
+    0x4040008040800020ULL,
+    0x440003000200801ULL,
+    0x4200011004500ULL,
+    0x188020010100100ULL,
+    0x14800401802800ULL,
+    0x2080040080800200ULL,
+    0x124080204001001ULL,
+    0x200046502000484ULL,
+    0x480400080088020ULL,
+    0x1000422010034000ULL,
+    0x30200100110040ULL,
+    0x100021010009ULL,
+    0x2002080100110004ULL,
+    0x202008004008002ULL,
+    0x20020004010100ULL,
+    0x2048440040820001ULL,
+    0x101002200408200ULL,
+    0x40802000401080ULL,
+    0x4008142004410100ULL,
+    0x2060820c0120200ULL,
+    0x1001004080100ULL,
+    0x20c020080040080ULL,
+    0x2935610830022400ULL,
+    0x44440041009200ULL,
+    0x280001040802101ULL,
+    0x2100190040002085ULL,
+    0x80c0084100102001ULL,
+    0x4024081001000421ULL,
+    0x20030a0244872ULL,
+    0x12001008414402ULL,
+    0x2006104900a0804ULL,
+    0x1004081002402ULL
+};
+U64 bishopMagicNums[64] = {
+    0x40040844404084ULL,
+    0x2004208a004208ULL,
+    0x10190041080202ULL,
+    0x108060845042010ULL,
+    0x581104180800210ULL,
+    0x2112080446200010ULL,
+    0x1080820820060210ULL,
+    0x3c0808410220200ULL,
+    0x4050404440404ULL,
+    0x21001420088ULL,
+    0x24d0080801082102ULL,
+    0x1020a0a020400ULL,
+    0x40308200402ULL,
+    0x4011002100800ULL,
+    0x401484104104005ULL,
+    0x801010402020200ULL,
+    0x400210c3880100ULL,
+    0x404022024108200ULL,
+    0x810018200204102ULL,
+    0x4002801a02003ULL,
+    0x85040820080400ULL,
+    0x810102c808880400ULL,
+    0xe900410884800ULL,
+    0x8002020480840102ULL,
+    0x220200865090201ULL,
+    0x2010100a02021202ULL,
+    0x152048408022401ULL,
+    0x20080002081110ULL,
+    0x4001001021004000ULL,
+    0x800040400a011002ULL,
+    0xe4004081011002ULL,
+    0x1c004001012080ULL,
+    0x8004200962a00220ULL,
+    0x8422100208500202ULL,
+    0x2000402200300c08ULL,
+    0x8646020080080080ULL,
+    0x80020a0200100808ULL,
+    0x2010004880111000ULL,
+    0x623000a080011400ULL,
+    0x42008c0340209202ULL,
+    0x209188240001000ULL,
+    0x400408a884001800ULL,
+    0x110400a6080400ULL,
+    0x1840060a44020800ULL,
+    0x90080104000041ULL,
+    0x201011000808101ULL,
+    0x1a2208080504f080ULL,
+    0x8012020600211212ULL,
+    0x500861011240000ULL,
+    0x180806108200800ULL,
+    0x4000020e01040044ULL,
+    0x300000261044000aULL,
+    0x802241102020002ULL,
+    0x20906061210001ULL,
+    0x5a84841004010310ULL,
+    0x4010801011c04ULL,
+    0xa010109502200ULL,
+    0x4a02012000ULL,
+    0x500201010098b028ULL,
+    0x8040002811040900ULL,
+    0x28000010020204ULL,
+    0x6000020202d0240ULL,
+    0x8918844842082200ULL,
+    0x4010011029020020ULL
+};
 
 U64 pawnAttack[2][64];
 U64 knightAttack[64];
@@ -353,10 +488,10 @@ U64 getRandomU64(){
 
     U64 n1, n2, n3, n4;
 
-    n1 = (U64)(getRandomU32() & 0xFFFF);
-    n2 = (U64)(getRandomU32() & 0xFFFF);
-    n3 = (U64)(getRandomU32() & 0xFFFF);
-    n4 = (U64)(getRandomU32() & 0xFFFF);
+    n1 = (U64)(getRandomU32()) & 0xFFFF;
+    n2 = (U64)(getRandomU32()) & 0xFFFF;
+    n3 = (U64)(getRandomU32()) & 0xFFFF;
+    n4 = (U64)(getRandomU32()) & 0xFFFF;
 
     return n1 | (n2 << 16) | (n3 << 32) | (n4 << 48);
 }
@@ -365,13 +500,75 @@ U64 genMagicNum(){
     return getRandomU64() & getRandomU64() & getRandomU64();
 }
 
+U64 findMagicNum(int square, int relBits, int bishop){
+
+    U64 occupancy[4096];
+    U64 attacks[4096];
+    U64 attacksUsed[4096];
+
+    U64 maskAttacks = bishop ? maskBishopAttacks(square) : maskRookAttacks(square);
+
+    int occupyInd = 1 << relBits;
+
+    for (int i = 0; i < occupyInd; i++){
+        occupancy[i] = setOccupancy(i, relBits, maskAttacks);
+        
+        if (bishop == true){
+            attacks[i] = realBishopAttacks(square, occupancy[i]);
+        } else {
+            // rook
+            attacks[i] = realRookAttacks(square, occupancy[i]);
+        }
+    }
+
+    for (int i = 0; i < 100000000; i++){
+
+        U64 magicNum = genMagicNum();
+
+        if (COUNT_BITS((maskAttacks * magicNum) & (0xFFULL << 56)) < 6) continue;
+        memset(attacksUsed, 0ULL, sizeof(attacksUsed));
+        
+        int index, fail;
+        for (index = 0, fail = 0; !fail && index < occupyInd; index++){
+            
+            int magicInd = (int)((occupancy[index] * magicNum) >> (64 - relBits));
+            
+            if (attacksUsed[magicInd] == 0ULL){
+                attacksUsed[magicInd] = attacks[index];
+            } else {
+                fail = 1;
+            }
+        }
+
+        if (!fail) return magicNum;
+    }
+    std::cout << "Magic Number Failed" << std::endl;
+    return 0ULL;
+}
+
+void initMagicNum(){
+    
+    for (int square = 0; square < 64; square++){
+        rookMagicNums[square] = findMagicNum(square, rookRelBits[square], rook);
+    }
+    for (int square = 0; square < 64; square++){
+        bishopMagicNums[square] = findMagicNum(square, bishopRelBits[square], bishop);
+    }
+
+}
+
+void initAll(){
+    
+   // generate attack tables
+    initLeaperAttacks();
+    
+    //initMagicNum();
+
+}
 
 int main(){
 
-    // generate attack tables
-    initLeaperAttacks();
-    
-    printBoard(genMagicNum());
+    initAll();
 
     return 0;
 }
