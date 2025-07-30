@@ -3,9 +3,15 @@
 #include <cstdint>
 #include <string.h>
 
-// Bitboard 64 Bit dec
 typedef unsigned long long  U64;
 #define C64(constantU64) constantU64##ULL
+// Bit macros
+#define SET_BIT(bitboard, square) ((bitboard) |= (1ULL << (square)))
+#define GET_BIT(bitboard, square) ((bitboard) & (1ULL << (square)))
+#define POP_BIT(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
+#define COUNT_BITS(bitboard) __builtin_popcountll(bitboard)
+#define GET_LEAST_SIG_BIT_IND(bitboard) ((bitboard) ? __builtin_ctzll(bitboard) : -1)
+
 
 // Squares
 enum {
@@ -16,9 +22,9 @@ enum {
     a4, b4, c4, d4, e4, f4, g4, h4,
     a3, b3, c3, d3, e3, f3, g3, h3,
     a2, b2, c2, d2, e2, f2, g2, h2,
-    a1, b1, c1, d1, e1, f1, g1, h1
+    a1, b1, c1, d1, e1, f1, g1, h1, 
+    noSquare
 };
-
 const char* const coords[] = {
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
@@ -30,18 +36,44 @@ const char* const coords[] = {
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
 };
 
+U64 bitboards[12];
+U64 occupancies[3];
+
+int side;
+int enpassant = noSquare;
+int castle = 0;
+
+// castle bit representation
+enum {wK = 1, wQ = 2, bK = 4, bQ = 8};
+// upper case -> white, lower case -> black
+enum {P, N, B, R, Q, K, p, n, r, b, q, k};
+
+const char asciiPieces[13] = "PNBRQKpnbrqk";
+//const char *unicodePieces[13] = {"♙", "♘", "♗", "♖", "♕", "♔", "♟︎", "♞", "♝", "♜", "♛", "♚"};
+
+const int pieces[] = {
+    ['P'] = P,
+    ['N'] = N,
+    ['B'] = B,
+    ['R'] = R,
+    ['Q'] = Q,
+    ['K'] = K,
+    ['p'] = p,
+    ['n'] = n,
+    ['b'] = b,
+    ['r'] = r,
+    ['q'] = q,
+    ['k'] = k
+};
+
+
 const int white = 0;
 const int black = 1;
+const int mono = 2;
 
 const int rook = 0;
 const int bishop = 1;
 
-// Bit macros
-#define SET_BIT(bitboard, square) (bitboard |= (1ULL << square))
-#define GET_BIT(bitboard, square) (bitboard & (1ULL << square))
-#define POP_BIT(bitboard, square) (GET_BIT(bitboard, square) ? bitboard ^= (1ULL << square) : 0)
-#define COUNT_BITS(bitboard) __builtin_popcountll(bitboard)
-#define GET_LEAST_SIG_BIT_IND(bitboard) ((bitboard) ? __builtin_ctzll(bitboard) : -1)
 
 void printBoard(U64 bitboard){
     for (int rank = 0; rank < 8; rank++ ){
@@ -62,6 +94,40 @@ void printBoard(U64 bitboard){
     std::cout << "\n   a b c d e f g h";
     std::cout << "\n Bitboard: " << bitboard;
 
+}
+
+void printPieces(){
+    std::cout << "\n";
+    for (int rank = 0; rank < 8; rank++){
+       
+        std::cout << "\n";
+        
+        for (int file = 0; file < 8; file++){
+            
+            if (file == 0) std::cout << 8 - rank << " ";
+            
+            int square = rank * 8 + file;
+            int setP = -1;
+
+            for (int piece = P; piece <= k; piece++){
+
+                if (GET_BIT(bitboards[piece], square)) setP = piece;
+            
+            }
+            std::cout << ' ' << ((setP == -1) ? '.' : asciiPieces[setP]);
+        }
+
+    }
+    std::cout << "\n   a b c d e f g h";
+    std::cout << "\nSide to move: " << ((side == 0) ? "White" : "Black");
+    std::cout << "\nEnpass: " << ((enpassant != noSquare) ? coords[enpassant] : "no");
+    //std::cout <, "\n Castle: " << ((castle & wk) ? 'K' : '-')
+
+    std::cout << "\nCastling:"
+          << ((castle & wK) ? 'K' : '-')
+          << ((castle & wQ) ? 'Q' : '-')
+          << ((castle & bK) ? 'k' : '-')
+          << ((castle & bQ) ? 'q' : '-');    
 }
 
 // not file constants numbers generated -> represent file as 0
@@ -225,9 +291,14 @@ U64 bishopMagicNums[64] = {
     0x4010011029020020ULL
 };
 
+U64 bishopMasks[64];
+U64 rookMasks[64];
+
 U64 pawnAttack[2][64];
 U64 knightAttack[64];
 U64 kingAttack[64];
+U64 bishopAttack[64][512];
+U64 rookAttack[64][4096];
 
 U64 maskPawnAttacks(int side, int square){
     
@@ -442,18 +513,20 @@ U64 realRookAttacks(int square, U64 blockers){
     return attacks;
 }
 
-void initLeaperAttacks(){
+static inline U64 getBishopAttacks(int square, U64 occupany){
+    occupany &= bishopMasks[square];
+    occupany *= bishopMagicNums[square];
+    occupany >>= 64 - bishopRelBits[square];
 
-    for (int square = 0; square < 64; square++){
+    return bishopAttack[square][occupany];
+}
 
-        pawnAttack[white][square] = maskPawnAttacks(white, square);
-        pawnAttack[black][square] = maskPawnAttacks(black, square);
+static inline U64 getRookAttacks(int square, U64 occupany){
+    occupany &= rookMasks[square];
+    occupany *= rookMagicNums[square];
+    occupany >>= 64 - rookRelBits[square];
 
-        knightAttack[square] = maskKnightAttacks(square);
-
-        kingAttack[square] = maskKingAttacks(square);
-    }
-
+    return rookAttack[square][occupany];
 }
 
 U64 setOccupancy(int index, int maskBits, U64 attackMask){
@@ -469,7 +542,7 @@ U64 setOccupancy(int index, int maskBits, U64 attackMask){
     return occupancy;
 }
 
-// magic number generators
+// magic number generator
 unsigned int ranState = 1804289383;
 
 unsigned int getRandomU32(){
@@ -546,6 +619,45 @@ U64 findMagicNum(int square, int relBits, int bishop){
     return 0ULL;
 }
 
+void initLeaperAttacks(){
+
+    for (int square = 0; square < 64; square++){
+
+        pawnAttack[white][square] = maskPawnAttacks(white, square);
+        pawnAttack[black][square] = maskPawnAttacks(black, square);
+
+        knightAttack[square] = maskKnightAttacks(square);
+
+        kingAttack[square] = maskKingAttacks(square);
+    }
+
+}
+
+void initSliderAttacks(int bishop){
+
+    for (int square = 0; square < 64; square++){
+        bishopMasks[square] = maskBishopAttacks(square);
+        rookMasks[square] = maskRookAttacks(square);
+
+        U64 attackMask = bishop ? bishopMasks[square] : rookMasks[square];
+
+        int relBitsCount = COUNT_BITS(attackMask);
+        int occupyInd = (1 << relBitsCount);
+
+        for (int i = 0; i < occupyInd; i++){
+            if (bishop){
+                U64 occupancy = setOccupancy(i, relBitsCount, attackMask);
+                int magicInd = (occupancy * bishopMagicNums[square]) >> (64 - bishopRelBits[square]);
+                bishopAttack[square][magicInd] = realBishopAttacks(square, occupancy);
+            } else {
+                U64 occupancy = setOccupancy(i, relBitsCount, attackMask);
+                int magicInd = (occupancy * rookMagicNums[square]) >> (64 - rookRelBits[square]);
+                rookAttack[square][magicInd] = realRookAttacks(square, occupancy);
+            }
+        }
+    }
+}
+
 void initMagicNum(){
     
     for (int square = 0; square < 64; square++){
@@ -558,17 +670,20 @@ void initMagicNum(){
 }
 
 void initAll(){
-    
-   // generate attack tables
-    initLeaperAttacks();
-    
-    //initMagicNum();
 
+    // generate attack tables
+    initLeaperAttacks();
+    initSliderAttacks(bishop);
+    initSliderAttacks(rook);
+    //initMagicNum();
 }
 
 int main(){
 
     initAll();
+
+    //printBoard(bitboards[P]);
+    printPieces();
 
     return 0;
 }
