@@ -5,13 +5,13 @@
 
 typedef unsigned long long  U64;
 #define C64(constantU64) constantU64##ULL
+
 // Bit macros
 #define SET_BIT(bitboard, square) ((bitboard) |= (1ULL << (square)))
 #define GET_BIT(bitboard, square) ((bitboard) & (1ULL << (square)))
 #define POP_BIT(bitboard, square) ((bitboard) &= ~(1ULL << (square)))
 #define COUNT_BITS(bitboard) __builtin_popcountll(bitboard)
 #define GET_LEAST_SIG_BIT_IND(bitboard) ((bitboard) ? __builtin_ctzll(bitboard) : -1)
-
 
 // Squares
 enum {
@@ -46,7 +46,7 @@ int castle = 0;
 // castle bit representation
 enum {wK = 1, wQ = 2, bK = 4, bQ = 8};
 // upper case -> white, lower case -> black
-enum {P, N, B, R, Q, K, p, n, r, b, q, k};
+enum {P, N, B, R, Q, K, p, n, b, r, q, k};
 
 const char asciiPieces[13] = "PNBRQKpnbrqk";
 //const char *unicodePieces[13] = {"♙", "♘", "♗", "♖", "♕", "♔", "♟︎", "♞", "♝", "♜", "♛", "♚"};
@@ -92,7 +92,7 @@ void printBoard(U64 bitboard){
     }
 
     std::cout << "\n   a b c d e f g h";
-    std::cout << "\n Bitboard: " << bitboard;
+    std::cout << "\n Bitboard: " << bitboard << "\n";
 
 }
 
@@ -129,6 +129,88 @@ void printPieces(){
           << ((castle & bK) ? 'k' : '-')
           << ((castle & bQ) ? 'q' : '-');    
 }
+
+void fenParse(const char* fenStr)
+{
+    memset(bitboards,   0, sizeof(bitboards));
+    memset(occupancies, 0, sizeof(occupancies));
+
+    side = white;
+    enpassant = noSquare;
+    castle = 0;
+
+    int fenItr = 0;
+
+    for (int rank = 0; rank < 8; rank++)
+    {
+        for (int file = 0; file < 8; file++)
+        {
+            int square = rank * 8 + file;
+
+            if (std::isalpha(fenStr[fenItr]) )
+            {
+                int pieceType = pieces[fenStr[fenItr]];
+                SET_BIT(bitboards[pieceType], square);
+                ++fenItr;
+            }
+
+            if (std::isdigit(fenStr[fenItr]) )
+            {
+                int offset = fenStr[fenItr] - '0';
+                int pieceType = -1;
+
+                for (int piece = P; piece <= k; piece++)
+                    if (GET_BIT(bitboards[piece], square)) pieceType = piece;
+
+                if (pieceType == -1) file--;
+
+                file += offset;
+                fenItr++;
+            }
+
+            if (fenStr[fenItr] == '/') fenItr++;
+        }
+    }
+    
+    fenItr++;
+    side = (fenStr[fenItr] == 'w') ? white : black;
+    fenItr += 2;
+    
+    while (fenStr[fenItr] != '\0' && fenStr[fenItr] != ' ') {
+        switch (fenStr[fenItr]) {
+            case 'K': castle |= wK; break;
+            case 'Q': castle |= wQ; break;
+            case 'k': castle |= bK; break;
+            case 'q': castle |= bQ; break;
+            default: break;
+        }
+            fenItr++;
+        }
+    fenItr++;
+
+    if (fenStr[fenItr] != '-'){
+        int file = fenStr[fenItr] - 'a';
+        int rank = 8 - (fenStr[fenItr + 1] - '0');
+        enpassant = rank * 8 + file;
+    } else {
+        enpassant = noSquare;
+    }
+
+    std::cout << "Fen: " << fenStr;
+
+
+    for (int piece = P; piece <= K; piece++){
+        occupancies[white] |= bitboards[piece];
+    }
+
+    for (int piece = p; piece <= k; piece++){
+        occupancies[black] |= bitboards[piece];
+    }
+
+    occupancies[mono] |= occupancies[white];
+    occupancies[mono] |= occupancies[black];
+}
+
 
 // not file constants numbers generated -> represent file as 0
 const U64 NOT_A_FILE = 18374403900871474942ULL;
@@ -682,8 +764,6 @@ int main(){
 
     initAll();
 
-    //printBoard(bitboards[P]);
-    printPieces();
 
     return 0;
 }
