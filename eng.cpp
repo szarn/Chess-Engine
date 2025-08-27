@@ -49,7 +49,6 @@ enum {wK = 1, wQ = 2, bK = 4, bQ = 8};
 enum {P, N, B, R, Q, K, p, n, b, r, q, k};
 
 const char asciiPieces[13] = "PNBRQKpnbrqk";
-//const char *unicodePieces[13] = {"♙", "♘", "♗", "♖", "♕", "♔", "♟︎", "♞", "♝", "♜", "♛", "♚"};
 
 const int pieces[] = {
     ['P'] = P,
@@ -382,6 +381,7 @@ U64 kingAttack[64];
 U64 bishopAttack[64][512];
 U64 rookAttack[64][4096];
 
+
 U64 maskPawnAttacks(int side, int square){
     
     U64 bitboard = 0ULL;
@@ -521,6 +521,7 @@ U64 maskRookAttacks(int square){
     return attacks;
 }
 
+
 U64 realBishopAttacks(int square, U64 blockers){
     U64 attacks = 0ULL;
 
@@ -595,21 +596,73 @@ U64 realRookAttacks(int square, U64 blockers){
     return attacks;
 }
 
-static inline U64 getBishopAttacks(int square, U64 occupany){
-    occupany &= bishopMasks[square];
-    occupany *= bishopMagicNums[square];
-    occupany >>= 64 - bishopRelBits[square];
 
-    return bishopAttack[square][occupany];
+static inline U64 getBishopAttacks(int square, U64 occupancy){
+    occupancy &= bishopMasks[square];
+    occupancy *= bishopMagicNums[square];
+    occupancy >>= 64 - bishopRelBits[square];
+
+    return bishopAttack[square][occupancy];
 }
 
-static inline U64 getRookAttacks(int square, U64 occupany){
-    occupany &= rookMasks[square];
-    occupany *= rookMagicNums[square];
-    occupany >>= 64 - rookRelBits[square];
+static inline U64 getRookAttacks(int square, U64 occupancy){
+    occupancy &= rookMasks[square];
+    occupancy *= rookMagicNums[square];
+    occupancy >>= 64 - rookRelBits[square];
 
-    return rookAttack[square][occupany];
+    return rookAttack[square][occupancy];
 }
+
+static inline U64 getQueenAttacks(int square, U64 occupancy){
+   return (getBishopAttacks(square, occupancy) | getRookAttacks(square, occupancy));
+}
+
+
+static inline bool squareAttackCheck(int square, int side){
+
+    
+    if ((side == white) && (pawnAttack[black][square] & bitboards[P])){
+        return true;
+    }
+    if ((side == black) && (pawnAttack[white][square] & bitboards[p])){
+        return true;
+    }
+
+    if (knightAttack[square] & ((side == white) ? bitboards[N] : bitboards[n])) return true;
+    if (kingAttack[square] & ((side == white) ? bitboards[K] : bitboards[k])) return true;
+
+    if (getBishopAttacks(square, occupancies[mono]) & ((side == white) ? bitboards[B] : bitboards[b])){
+        return true;
+    }
+    if (getRookAttacks(square, occupancies[mono]) & ((side == white) ? bitboards[R] : bitboards[r])){
+        return true;
+    }
+    if (getQueenAttacks(square, occupancies[mono]) & ((side == white) ? bitboards[Q] : bitboards[q])){
+        return true;
+    }
+
+    return false;
+}
+
+void printAttacked(int side){
+    std::cout << "\n";
+    for (int rank = 0; rank < 8; rank++){
+        std::cout << "\n";
+
+        for (int file = 0; file < 8; file++){
+            int square = rank * 8 + file;
+            
+            if (file == 0) std::cout << 8 - rank << " ";
+
+            std::cout << (squareAttackCheck(square, side) ? 1 : 0) << " ";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << "\n  a b c d e f g h";
+
+}
+
 
 U64 setOccupancy(int index, int maskBits, U64 attackMask){
 
@@ -701,6 +754,126 @@ U64 findMagicNum(int square, int relBits, int bishop){
     return 0ULL;
 }
 
+
+void genMoves(){
+    int startSquare, targetSquare;
+
+    U64 bitboard, attacks;
+
+    for (int piece = P; piece <= k; piece++){
+        bitboard = bitboards[piece];
+        
+        if (side == white){
+            if (piece == P){
+                while (bitboard){
+                    startSquare = GET_LEAST_SIG_BIT_IND(bitboard);
+                    targetSquare = startSquare - 8;
+                    
+                    if (!(targetSquare < a8) && !GET_BIT(occupancies[mono], targetSquare)){
+
+                        if (startSquare >= a7 && startSquare <= h7){   
+                            std::cout << "\nPawn Promo: "<< coords[startSquare] << coords[targetSquare];
+
+                        } else {
+                            std::cout << "\nPawn Push: "<< coords[startSquare] << coords[targetSquare];
+                            
+                            if ((startSquare >= a2 && startSquare <= h2) && !GET_BIT(occupancies[mono], targetSquare - 8)){
+                                std::cout << "\nDouble Pawn Push: "<< coords[startSquare] << coords[targetSquare - 8];
+                            }
+                        }
+                    }
+
+                    attacks = pawnAttack[side][startSquare] & occupancies[black];
+
+                    while (attacks){
+                        targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
+
+                        if (startSquare >= a7 && startSquare <= h7){   
+                            std::cout << "\nPawn Capture Promo: "<< coords[startSquare] << coords[targetSquare];
+
+                        } else {
+                            std::cout << "\nPawn Capture Push: "<< coords[startSquare] << coords[targetSquare];
+                        }
+
+                        POP_BIT(attacks, targetSquare);
+                    }
+
+                    
+                    if (enpassant != noSquare){
+                        U64 enpassAttacks = pawnAttack[side][startSquare] & (1ULL << enpassant);
+
+                        if (enpassAttacks){
+                            int targetEnpass = GET_LEAST_SIG_BIT_IND(enpassAttacks);
+                            std::cout << "\nPawn enpass capture: " << coords[startSquare] << coords[targetEnpass];
+                        }
+                    }
+
+                    POP_BIT(bitboard, startSquare);
+                }
+            }
+
+        } else {
+            if (piece == p){
+                while (bitboard){
+                    startSquare = GET_LEAST_SIG_BIT_IND(bitboard);
+                    targetSquare = startSquare + 8;
+                    
+                    if (!(targetSquare > h1) && !GET_BIT(occupancies[mono], targetSquare)){
+
+                        if (startSquare >= a2 && startSquare <= h2){   
+                            std::cout << "\nPawn Promo: "<< coords[startSquare] << coords[targetSquare];
+
+                        } else {
+                            std::cout << "\nPawn Push: "<< coords[startSquare] << coords[targetSquare];
+                            
+                            if ((startSquare >= a7 && startSquare <= h7) && !GET_BIT(occupancies[mono], targetSquare + 8)){
+                                std::cout << "\nDouble Pawn Push: "<< coords[startSquare] << coords[targetSquare + 8];
+                            }
+                        }
+
+
+                    }
+
+                     attacks = pawnAttack[side][startSquare] & occupancies[white];
+
+                    while (attacks){
+                        targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
+
+                        if (startSquare >= a2 && startSquare <= h2){   
+                            std::cout << "\nPawn Capture Promo: "<< coords[startSquare] << coords[targetSquare];
+
+                        } else {
+                            std::cout << "\nPawn Capture Push: "<< coords[startSquare] << coords[targetSquare];
+                        }
+
+                        POP_BIT(attacks, targetSquare);
+                    }
+
+                    
+                    if (enpassant != noSquare){
+                        U64 enpassAttacks = pawnAttack[side][startSquare] & (1ULL << enpassant);
+
+                        if (enpassAttacks){
+                            int targetEnpass = GET_LEAST_SIG_BIT_IND(enpassAttacks);
+                            std::cout << "\nPawn enpass capture: " << coords[startSquare] << coords[targetEnpass];
+                        }
+                    }
+
+
+                    POP_BIT(bitboard, startSquare);
+                }
+            }
+        }
+
+
+
+    }
+
+
+}
+
+
+
 void initLeaperAttacks(){
 
     for (int square = 0; square < 64; square++){
@@ -751,6 +924,7 @@ void initMagicNum(){
 
 }
 
+
 void initAll(){
 
     // generate attack tables
@@ -760,10 +934,20 @@ void initAll(){
     //initMagicNum();
 }
 
+//debug board pos
+#define empty_board "r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R b KQkq c6 - 0 1"
+#define tricky_pos "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R b KQkq a3 0 1"
+
+
 int main(){
 
     initAll();
 
+
+    fenParse("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R b KQkq a3 0 1");
+    printPieces();
+
+    genMoves();
 
     return 0;
 }
