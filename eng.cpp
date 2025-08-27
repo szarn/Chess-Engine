@@ -754,7 +754,6 @@ U64 findMagicNum(int square, int relBits, int bishop){
     return 0ULL;
 }
 
-
 void genMoves(){
     int startSquare, targetSquare;
 
@@ -899,6 +898,122 @@ void genMoves(){
                 }
             }
         }
+
+        if ((side == white) ? piece == N : piece == n){
+            while (bitboard){
+                startSquare = GET_LEAST_SIG_BIT_IND(bitboard);
+
+                attacks = knightAttack[startSquare] & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+
+                while (attacks){
+                    targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
+
+                    if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
+                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                    } else {
+                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                    }
+
+
+                    POP_BIT(attacks, targetSquare);
+                }
+
+                POP_BIT(bitboard, startSquare);
+            }
+        }
+
+        if ((side == white) ? piece == B : piece == b){
+            while (bitboard){
+                startSquare = GET_LEAST_SIG_BIT_IND(bitboard);
+
+                attacks = getBishopAttacks(startSquare, occupancies[mono]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+
+                while (attacks){
+                    targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
+
+                    if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
+                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                    } else {
+                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                    }
+
+
+                    POP_BIT(attacks, targetSquare);
+                }
+
+                POP_BIT(bitboard, startSquare);
+            }
+        }
+
+        if ((side == white) ? piece == R : piece == r){
+            while (bitboard){
+                startSquare = GET_LEAST_SIG_BIT_IND(bitboard);
+
+                attacks = getRookAttacks(startSquare, occupancies[mono]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+
+                while (attacks){
+                    targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
+
+                    if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
+                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                    } else {
+                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                    }
+
+
+                    POP_BIT(attacks, targetSquare);
+                }
+
+                POP_BIT(bitboard, startSquare);
+            }
+        }
+
+        if ((side == white) ? piece == Q : piece == q){
+            while (bitboard){
+                startSquare = GET_LEAST_SIG_BIT_IND(bitboard);
+
+                attacks = getQueenAttacks(startSquare, occupancies[mono]) & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+
+                while (attacks){
+                    targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
+
+                    if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
+                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                    } else {
+                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                    }
+
+
+                    POP_BIT(attacks, targetSquare);
+                }
+
+                POP_BIT(bitboard, startSquare);
+            }
+        }
+
+         if ((side == white) ? piece == K : piece == k){
+            while (bitboard){
+                startSquare = GET_LEAST_SIG_BIT_IND(bitboard);
+
+                attacks = kingAttack[startSquare] & ((side == white) ? ~occupancies[white] : ~occupancies[black]);
+
+                while (attacks){
+                    targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
+
+                    if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
+                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                    } else {
+                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                    }
+
+
+                    POP_BIT(attacks, targetSquare);
+                }
+
+                POP_BIT(bitboard, startSquare);
+            }
+        }
+
     }
 }
 
@@ -954,7 +1069,6 @@ void initMagicNum(){
 
 }
 
-
 void initAll(){
 
     // generate attack tables
@@ -968,15 +1082,36 @@ void initAll(){
 #define empty_board "r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R b KQkq c6 - 0 1"
 #define tricky_pos "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R w KQkq a3 0 1"
 
+//encode
+#define ENCODE_MOVE(start, target, piece, promoted, capture, double, enpassant, castling) \
+    (start) | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 26) | (double << 21) | \
+    (enpassant << 22) | (castling << 23)
+
+#define GET_MOVE_START(move) (move & 0x3f)
+#define GET_MOVE_TARGET(move) ((move & 0xfc0) >> 6)
+#define GET_MOVE_PIECE(move) ((move & 0xf000) >> 12)
+#define GET_MOVE_PROMOTED(move) ((move & 0xf0000) >> 16)
+#define GET_MOVE_CAPTURE(move) (move & 0x100000)
+#define GET_MOVE_DOUBLE(move) (move & 0x200000)
+#define GET_MOVE_ENPASSANT(move) (move & 0x400000)
+#define GET_MOVE_CASTLING(move) (move & 0x800000)
+
+
 int main(){
 
     initAll();
 
 
-    fenParse("r3k2r/p1ppQpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ");
-    printPieces();
+    int move = ENCODE_MOVE(e2, e4, P, 0,0,0,0, 0);
 
-    genMoves();
+    int start = GET_MOVE_START(move);
+    int target = GET_MOVE_TARGET(move);
+    int piece = GET_MOVE_PIECE(move);
+
+    std::cout << coords[start] << "\n";
+    std::cout << target;
+    std::cout << piece;
+
 
     return 0;
 }
