@@ -812,6 +812,24 @@ void genMoves(){
                 }
             }
 
+            if (piece == K){
+                if (castle & wK){
+                    if (!GET_BIT(occupancies[mono], f1) && !GET_BIT(occupancies[mono], g1)){
+                        if (!squareAttackCheck(e1, black) && !squareAttackCheck(f1, black)){
+                            std::cout << "\nCastling move: e1g1";
+                        }
+                    }
+                }
+
+                if (castle & wQ){
+                    if (!GET_BIT(occupancies[mono], d1) && !GET_BIT(occupancies[mono], c1) && !GET_BIT(occupancies[mono], b1)){
+                        if (!squareAttackCheck(e1, black) && !squareAttackCheck(d1, black)){
+                            std::cout << "\nCastling move: e1c1";
+                        }
+                    }
+                }
+            }
+
         } else {
             if (piece == p){
                 while (bitboard){
@@ -859,17 +877,29 @@ void genMoves(){
                         }
                     }
 
-
                     POP_BIT(bitboard, startSquare);
                 }
             }
+
+            if (piece == k){
+                if (castle & bK){
+                    if (!GET_BIT(occupancies[mono], f8) && !GET_BIT(occupancies[mono], g8)){
+                        if (!squareAttackCheck(e8, white) && !squareAttackCheck(f8, white)){
+                            std::cout << "\nCastling move: e8g8";
+                        }
+                    }
+                }
+
+                if (castle & bQ){
+                    if (!GET_BIT(occupancies[mono], d8) && !GET_BIT(occupancies[mono], c8) && !GET_BIT(occupancies[mono], b8)){
+                        if (!squareAttackCheck(e8, white) && !squareAttackCheck(d8, white)){
+                            std::cout << "\nCastling move: e8c8";
+                        }
+                    }
+                }
+            }
         }
-
-
-
     }
-
-
 }
 
 
@@ -936,15 +966,14 @@ void initAll(){
 
 //debug board pos
 #define empty_board "r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R b KQkq c6 - 0 1"
-#define tricky_pos "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R b KQkq a3 0 1"
-
+#define tricky_pos "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R w KQkq a3 0 1"
 
 int main(){
 
     initAll();
 
 
-    fenParse("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R b KQkq a3 0 1");
+    fenParse("r3k2r/p1ppQpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ");
     printPieces();
 
     genMoves();
