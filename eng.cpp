@@ -21,7 +21,7 @@ typedef unsigned long long  U64;
 #define GET_MOVE_TARGET(move) ((move & 0xfc0) >> 6)
 #define GET_MOVE_PIECE(move) ((move & 0xf000) >> 12)
 #define GET_MOVE_PROMOTED(move) ((move & 0xf0000) >> 16)
-#define GET_MOVE_CAPTURE(move) (move & 0x100000)
+#define GET_MOVE_CAPTURE(move) ((move) & 0x4000000)   // 1 << 26
 #define GET_MOVE_DOUBLE(move) (move & 0x200000)
 #define GET_MOVE_ENPASSANT(move) (move & 0x400000)
 #define GET_MOVE_CASTLING(move) (move & 0x800000)
@@ -951,7 +951,7 @@ void genMoves(moves *moveList){
 
                         if (enpassAttacks){
                             int targetEnpass = GET_LEAST_SIG_BIT_IND(enpassAttacks);
-                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 1, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetEnpass, piece, 0, 1, 0, 1, 0));
                         }
                     }
 
@@ -988,9 +988,10 @@ void genMoves(moves *moveList){
                     targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
 
                     if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
-                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 0, 0, 0, 0));
+                    
                     } else {
-                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 0, 0));
                     }
 
 
@@ -1011,9 +1012,9 @@ void genMoves(moves *moveList){
                     targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
 
                     if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
-                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 0, 0, 0, 0));
                     } else {
-                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 0, 0));
                     }
 
 
@@ -1034,9 +1035,9 @@ void genMoves(moves *moveList){
                     targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
 
                     if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
-                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 0, 0, 0, 0));
                     } else {
-                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 0, 0));
                     }
 
 
@@ -1057,9 +1058,9 @@ void genMoves(moves *moveList){
                     targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
 
                     if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
-                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 0, 0, 0, 0));
                     } else {
-                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 0, 0));
                     }
 
 
@@ -1080,9 +1081,9 @@ void genMoves(moves *moveList){
                     targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
 
                     if (!GET_BIT(((side == white) ? occupancies[black] : occupancies[white]), targetSquare)){
-                        std::cout << "\nPiece quiet move: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 0, 0, 0, 0));
                     } else {
-                        std::cout << "\nPiece capture: " << coords[startSquare] << coords[targetSquare];
+                        addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 0, 0));
                     }
 
 
@@ -1159,7 +1160,7 @@ void initAll(){
 
 //debug board pos
 #define empty_board "r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R b KQkq c6 - 0 1"
-#define tricky_pos "r3k2r/pPppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
+#define tricky_pos "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
 
 int main(){
 
