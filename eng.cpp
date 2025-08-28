@@ -13,6 +13,21 @@ typedef unsigned long long  U64;
 #define COUNT_BITS(bitboard) __builtin_popcountll(bitboard)
 #define GET_LEAST_SIG_BIT_IND(bitboard) ((bitboard) ? __builtin_ctzll(bitboard) : -1)
 
+// Move encoders
+#define ENCODE_MOVE(start, target, piece, promoted, capture, double, enpassant, castling) \
+    (start) | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 26) | (double << 21) | \
+    (enpassant << 22) | (castling << 23)
+#define GET_MOVE_START(move) (move & 0x3f)
+#define GET_MOVE_TARGET(move) ((move & 0xfc0) >> 6)
+#define GET_MOVE_PIECE(move) ((move & 0xf000) >> 12)
+#define GET_MOVE_PROMOTED(move) ((move & 0xf0000) >> 16)
+#define GET_MOVE_CAPTURE(move) (move & 0x100000)
+#define GET_MOVE_DOUBLE(move) (move & 0x200000)
+#define GET_MOVE_ENPASSANT(move) (move & 0x400000)
+#define GET_MOVE_CASTLING(move) (move & 0x800000)
+
+
+
 // Squares
 enum {
     a8, b8, c8, d8, e8, f8, g8, h8,
@@ -1069,8 +1084,56 @@ void initMagicNum(){
 
 }
 
-void initAll(){
 
+
+struct moves
+{
+    int moves[256];    
+    int count;
+};
+
+static inline void addMove(moves *moveList, int move){
+    moveList -> moves[moveList-> count] = move;
+    moveList -> count++;
+}
+
+char promoPieces[] = {
+    [Q] = 'q',
+    [R] = 'r',    
+    [B] = 'b',
+    [N] = 'n',
+    [q] = 'q',
+    [r] = 'r',
+    [b] = 'b',
+    [n] = 'n',
+};
+
+void printMove(int move){
+    std::cout << coords[GET_MOVE_START(move)];
+    std::cout << coords[GET_MOVE_TARGET(move)];
+    std::cout << coords[GET_MOVE_PROMOTED(move)];
+}
+
+void printMoveList(moves *moveList){
+
+   std::cout << "\n     move    piece   capture   double    enpass    castling\n\n";
+   
+   for (int moveCount = 0; moveCount < moveList -> count; moveCount++){
+        int move = moveList -> moves[moveCount];
+
+        std::cout << "     " << coords[GET_MOVE_START(move)]
+        << coords[GET_MOVE_TARGET(move)] << "     " << promoPieces[GET_MOVE_PROMOTED(move)] << "   "
+        << asciiPieces[GET_MOVE_PIECE(move)]  << "        "
+        << (GET_MOVE_CAPTURE(move) ? 1 : 0)  << "        "  << (GET_MOVE_DOUBLE(move) ? 1 : 0)  << "        "
+        << (GET_MOVE_ENPASSANT(move) ? 1 : 0)  << "        " << (GET_MOVE_CASTLING(move) ? 1 : 0);
+   }
+
+   std::cout  << "\nTotal moves: " << moveList -> count;
+
+}
+
+
+void initAll(){
     // generate attack tables
     initLeaperAttacks();
     initSliderAttacks(bishop);
@@ -1082,36 +1145,15 @@ void initAll(){
 #define empty_board "r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R b KQkq c6 - 0 1"
 #define tricky_pos "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R w KQkq a3 0 1"
 
-//encode
-#define ENCODE_MOVE(start, target, piece, promoted, capture, double, enpassant, castling) \
-    (start) | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 26) | (double << 21) | \
-    (enpassant << 22) | (castling << 23)
-
-#define GET_MOVE_START(move) (move & 0x3f)
-#define GET_MOVE_TARGET(move) ((move & 0xfc0) >> 6)
-#define GET_MOVE_PIECE(move) ((move & 0xf000) >> 12)
-#define GET_MOVE_PROMOTED(move) ((move & 0xf0000) >> 16)
-#define GET_MOVE_CAPTURE(move) (move & 0x100000)
-#define GET_MOVE_DOUBLE(move) (move & 0x200000)
-#define GET_MOVE_ENPASSANT(move) (move & 0x400000)
-#define GET_MOVE_CASTLING(move) (move & 0x800000)
-
 
 int main(){
 
     initAll();
 
-
-    int move = ENCODE_MOVE(e2, e4, P, 0,0,0,0, 0);
-
-    int start = GET_MOVE_START(move);
-    int target = GET_MOVE_TARGET(move);
-    int piece = GET_MOVE_PIECE(move);
-
-    std::cout << coords[start] << "\n";
-    std::cout << target;
-    std::cout << piece;
-
+    moves moveList{};
+    moveList.count = 0;
+    addMove(&moveList, ENCODE_MOVE(e2,e4,P,0,0,0,0,0));
+    printMoveList(&moveList);
 
     return 0;
 }
