@@ -89,6 +89,54 @@ const int rook = 0;
 const int bishop = 1;
 
 
+struct moves
+{
+    int moves[256];    
+    int count;
+};
+
+static inline void addMove(moves *moveList, int move){
+    moveList -> moves[moveList-> count] = move;
+    moveList -> count++;
+}
+
+char promoPieces[] = {
+    [Q] = 'q',
+    [R] = 'r',    
+    [B] = 'b',
+    [N] = 'n',
+    [q] = 'q',
+    [r] = 'r',
+    [b] = 'b',
+    [n] = 'n',
+};
+
+void printMove(int move){
+    std::cout << coords[GET_MOVE_START(move)];
+    std::cout << coords[GET_MOVE_TARGET(move)];
+    std::cout << coords[GET_MOVE_PROMOTED(move)];
+}
+
+void printMoveList(moves *moveList){
+
+    if (!moveList -> count) std::cout << "\nNo moves in move list";
+
+    std::cout << "\n     move    piece   capture   double    enpass    castling\n\n";
+   
+    for (int moveCount = 0; moveCount < moveList -> count; moveCount++){
+        int move = moveList -> moves[moveCount];
+
+        std::cout << "     " << coords[GET_MOVE_START(move)]
+        << coords[GET_MOVE_TARGET(move)] << (GET_MOVE_PROMOTED(move) ? promoPieces[GET_MOVE_PROMOTED(move)] : ' ') << "   "
+        << asciiPieces[GET_MOVE_PIECE(move)]  << "       "
+        << (GET_MOVE_CAPTURE(move) ? 1 : 0)  << "         "  << (GET_MOVE_DOUBLE(move) ? 1 : 0)  << "         "
+        << (GET_MOVE_ENPASSANT(move) ? 1 : 0)  << "         " << (GET_MOVE_CASTLING(move) ? 1 : 0) << "\n";
+    }
+
+    std::cout  << "\nTotal moves: " << moveList -> count;
+
+}
+
 void printBoard(U64 bitboard){
     for (int rank = 0; rank < 8; rank++ ){
         std::cout << "\n";
@@ -769,9 +817,11 @@ U64 findMagicNum(int square, int relBits, int bishop){
     return 0ULL;
 }
 
-void genMoves(){
-    int startSquare, targetSquare;
+void genMoves(moves *moveList){
 
+    moveList -> count = 0;
+
+    int startSquare, targetSquare;
     U64 bitboard, attacks;
 
     for (int piece = P; piece <= k; piece++){
@@ -785,14 +835,18 @@ void genMoves(){
                     
                     if (!(targetSquare < a8) && !GET_BIT(occupancies[mono], targetSquare)){
 
-                        if (startSquare >= a7 && startSquare <= h7){   
-                            std::cout << "\nPawn Promo: "<< coords[startSquare] << coords[targetSquare];
+                        if (startSquare >= a7 && startSquare <= h7){ 
+
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, Q, 0, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, R, 0, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, B, 0, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, N, 0, 0, 0, 0));
 
                         } else {
-                            std::cout << "\nPawn Push: "<< coords[startSquare] << coords[targetSquare];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 0, 0, 0, 0));
                             
                             if ((startSquare >= a2 && startSquare <= h2) && !GET_BIT(occupancies[mono], targetSquare - 8)){
-                                std::cout << "\nDouble Pawn Push: "<< coords[startSquare] << coords[targetSquare - 8];
+                                addMove(moveList, ENCODE_MOVE(startSquare, (targetSquare - 8), piece, 0, 0, 1, 0, 0));
                             }
                         }
                     }
@@ -803,10 +857,14 @@ void genMoves(){
                         targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
 
                         if (startSquare >= a7 && startSquare <= h7){   
-                            std::cout << "\nPawn Capture Promo: "<< coords[startSquare] << coords[targetSquare];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, Q, 1, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, R, 1, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, B, 1, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, N, 1, 0, 0, 0));
 
                         } else {
-                            std::cout << "\nPawn Capture Push: "<< coords[startSquare] << coords[targetSquare];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 0, 0));  
+
                         }
 
                         POP_BIT(attacks, targetSquare);
@@ -818,7 +876,7 @@ void genMoves(){
 
                         if (enpassAttacks){
                             int targetEnpass = GET_LEAST_SIG_BIT_IND(enpassAttacks);
-                            std::cout << "\nPawn enpass capture: " << coords[startSquare] << coords[targetEnpass];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetEnpass, piece, 0, 1, 0, 1, 0));
                         }
                     }
 
@@ -830,7 +888,7 @@ void genMoves(){
                 if (castle & wK){
                     if (!GET_BIT(occupancies[mono], f1) && !GET_BIT(occupancies[mono], g1)){
                         if (!squareAttackCheck(e1, black) && !squareAttackCheck(f1, black)){
-                            std::cout << "\nCastling move: e1g1";
+                            addMove(moveList, ENCODE_MOVE(e1, g1, piece, 0, 0, 0, 0, 1));
                         }
                     }
                 }
@@ -838,7 +896,7 @@ void genMoves(){
                 if (castle & wQ){
                     if (!GET_BIT(occupancies[mono], d1) && !GET_BIT(occupancies[mono], c1) && !GET_BIT(occupancies[mono], b1)){
                         if (!squareAttackCheck(e1, black) && !squareAttackCheck(d1, black)){
-                            std::cout << "\nCastling move: e1c1";
+                            addMove(moveList, ENCODE_MOVE(e1, c1, piece, 0, 0, 0, 0, 1));
                         }
                     }
                 }
@@ -853,13 +911,16 @@ void genMoves(){
                     if (!(targetSquare > h1) && !GET_BIT(occupancies[mono], targetSquare)){
 
                         if (startSquare >= a2 && startSquare <= h2){   
-                            std::cout << "\nPawn Promo: "<< coords[startSquare] << coords[targetSquare];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, q, 0, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, r, 0, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, b, 0, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, n, 0, 0, 0, 0));
 
                         } else {
-                            std::cout << "\nPawn Push: "<< coords[startSquare] << coords[targetSquare];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 0, 0, 0, 0));
                             
                             if ((startSquare >= a7 && startSquare <= h7) && !GET_BIT(occupancies[mono], targetSquare + 8)){
-                                std::cout << "\nDouble Pawn Push: "<< coords[startSquare] << coords[targetSquare + 8];
+                                addMove(moveList, ENCODE_MOVE(startSquare, (targetSquare + 8), piece, 0, 0, 1, 0, 0));
                             }
                         }
 
@@ -872,10 +933,13 @@ void genMoves(){
                         targetSquare = GET_LEAST_SIG_BIT_IND(attacks);
 
                         if (startSquare >= a2 && startSquare <= h2){   
-                            std::cout << "\nPawn Capture Promo: "<< coords[startSquare] << coords[targetSquare];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, q, 1, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, r, 1, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, b, 1, 0, 0, 0));
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, n, 1, 0, 0, 0));
 
                         } else {
-                            std::cout << "\nPawn Capture Push: "<< coords[startSquare] << coords[targetSquare];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 0, 0));
                         }
 
                         POP_BIT(attacks, targetSquare);
@@ -887,7 +951,7 @@ void genMoves(){
 
                         if (enpassAttacks){
                             int targetEnpass = GET_LEAST_SIG_BIT_IND(enpassAttacks);
-                            std::cout << "\nPawn enpass capture: " << coords[startSquare] << coords[targetEnpass];
+                            addMove(moveList, ENCODE_MOVE(startSquare, targetSquare, piece, 0, 1, 0, 1, 0));
                         }
                     }
 
@@ -899,7 +963,7 @@ void genMoves(){
                 if (castle & bK){
                     if (!GET_BIT(occupancies[mono], f8) && !GET_BIT(occupancies[mono], g8)){
                         if (!squareAttackCheck(e8, white) && !squareAttackCheck(f8, white)){
-                            std::cout << "\nCastling move: e8g8";
+                            addMove(moveList, ENCODE_MOVE(e8, g8, piece, 0, 0, 0, 0, 1));
                         }
                     }
                 }
@@ -907,7 +971,7 @@ void genMoves(){
                 if (castle & bQ){
                     if (!GET_BIT(occupancies[mono], d8) && !GET_BIT(occupancies[mono], c8) && !GET_BIT(occupancies[mono], b8)){
                         if (!squareAttackCheck(e8, white) && !squareAttackCheck(d8, white)){
-                            std::cout << "\nCastling move: e8c8";
+                            addMove(moveList, ENCODE_MOVE(e8, c8, piece, 0, 0, 0, 0, 1));
                         }
                     }
                 }
@@ -1085,54 +1149,6 @@ void initMagicNum(){
 }
 
 
-
-struct moves
-{
-    int moves[256];    
-    int count;
-};
-
-static inline void addMove(moves *moveList, int move){
-    moveList -> moves[moveList-> count] = move;
-    moveList -> count++;
-}
-
-char promoPieces[] = {
-    [Q] = 'q',
-    [R] = 'r',    
-    [B] = 'b',
-    [N] = 'n',
-    [q] = 'q',
-    [r] = 'r',
-    [b] = 'b',
-    [n] = 'n',
-};
-
-void printMove(int move){
-    std::cout << coords[GET_MOVE_START(move)];
-    std::cout << coords[GET_MOVE_TARGET(move)];
-    std::cout << coords[GET_MOVE_PROMOTED(move)];
-}
-
-void printMoveList(moves *moveList){
-
-   std::cout << "\n     move    piece   capture   double    enpass    castling\n\n";
-   
-   for (int moveCount = 0; moveCount < moveList -> count; moveCount++){
-        int move = moveList -> moves[moveCount];
-
-        std::cout << "     " << coords[GET_MOVE_START(move)]
-        << coords[GET_MOVE_TARGET(move)] << "     " << promoPieces[GET_MOVE_PROMOTED(move)] << "   "
-        << asciiPieces[GET_MOVE_PIECE(move)]  << "        "
-        << (GET_MOVE_CAPTURE(move) ? 1 : 0)  << "        "  << (GET_MOVE_DOUBLE(move) ? 1 : 0)  << "        "
-        << (GET_MOVE_ENPASSANT(move) ? 1 : 0)  << "        " << (GET_MOVE_CASTLING(move) ? 1 : 0);
-   }
-
-   std::cout  << "\nTotal moves: " << moveList -> count;
-
-}
-
-
 void initAll(){
     // generate attack tables
     initLeaperAttacks();
@@ -1143,17 +1159,20 @@ void initAll(){
 
 //debug board pos
 #define empty_board "r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R b KQkq c6 - 0 1"
-#define tricky_pos "r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R w KQkq a3 0 1"
-
+#define tricky_pos "r3k2r/pPppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
 
 int main(){
 
     initAll();
 
-    moves moveList{};
-    moveList.count = 0;
-    addMove(&moveList, ENCODE_MOVE(e2,e4,P,0,0,0,0,0));
-    printMoveList(&moveList);
+    fenParse(tricky_pos);
+
+    moves moveList[1];
+
+    genMoves(moveList);
+    printMoveList(moveList);
+
+
 
     return 0;
 }
