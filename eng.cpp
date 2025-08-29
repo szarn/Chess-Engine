@@ -137,7 +137,7 @@ void printMoveList(moves *moveList){
 
 }
 
-void printBoard(U64 bitboard){
+void printBitboardBoard(U64 bitboard){
     for (int rank = 0; rank < 8; rank++ ){
         std::cout << "\n";
 
@@ -158,7 +158,7 @@ void printBoard(U64 bitboard){
 
 }
 
-void printPieces(){
+void printBoard(){
     std::cout << "\n";
     for (int rank = 0; rank < 8; rank++){
        
@@ -817,6 +817,20 @@ U64 findMagicNum(int square, int relBits, int bishop){
     return 0ULL;
 }
 
+
+// preserve & restore board state macros
+#define copyBoard() \
+    U64 bitboardsCopy[12], occupanciesCopy[3]; \
+    int sideCopy, enpassCopy, castleCopy; \
+    memcpy(bitboardsCopy, bitbaords, sizeof(bitboards)); \
+    memcpy(occupanciesCopy, occupancies, sizeof(occupancies)); \
+    sideCopy = side, enpassCopy = enpassant, castleCopy = castle;
+
+#define takeBack() \
+    memcpy(bitboards, bitboardsCopy, sizeof(bitboards)); \
+    memcpy(occupancies, occupanciesCopy, sizeof(occupancies)); \
+    side = sideCopy, enpassant = enpassCopy, castle = castleCopy;
+
 void genMoves(moves *moveList){
 
     moveList -> count = 0;
@@ -1093,7 +1107,6 @@ void genMoves(moves *moveList){
                 POP_BIT(bitboard, startSquare);
             }
         }
-
     }
 }
 
@@ -1158,7 +1171,9 @@ void initAll(){
     //initMagicNum();
 }
 
-//debug board pos
+
+
+// debug board pos
 #define empty_board "r3k2r/p11pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPpP/R3K2R b KQkq c6 - 0 1"
 #define tricky_pos "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 "
 
@@ -1166,13 +1181,10 @@ int main(){
 
     initAll();
 
+
     fenParse(tricky_pos);
 
-    moves moveList[1];
-
-    genMoves(moveList);
-    printMoveList(moveList);
-
+    printBoard();
 
 
     return 0;
