@@ -834,7 +834,7 @@ U64 findMagicNum(int square, int relBits, int bishop){
 
 enum {allMoves, onlyCaptures};
 
-static inline int makeMove(int move, int moveFlag){
+int makeMove(int move, int moveFlag){
 
     if (moveFlag == allMoves){
         // perserve state if not valid
@@ -875,6 +875,36 @@ static inline int makeMove(int move, int moveFlag){
         if (enpassant){
             (side == white) ? POP_BIT(bitboards[p], targetSquare + 8) 
             : POP_BIT(bitboards[P], targetSquare - 8);
+        }
+        enpassant = noSquare;
+
+        if (doublePush){
+            (side == white) ? (enpassant = targetSquare + 8) 
+            : (enpassant = targetSquare - 8);
+        }
+
+        if (castling){
+            switch (targetSquare){
+                case (g1):
+                    POP_BIT(bitboards[R], h1);
+                    SET_BIT(bitboards[R], f1);
+                    break;
+
+                case (c1):
+                    POP_BIT(bitboards[R], a1);
+                    SET_BIT(bitboards[R], d1);
+                    break;
+
+                case (g8):
+                    POP_BIT(bitboards[r], h8);
+                    SET_BIT(bitboards[r], f8);
+                    break;
+
+                case (c8):
+                    POP_BIT(bitboards[r], a8);
+                    SET_BIT(bitboards[r], d8);
+                    break;
+            }
         }
 
 
