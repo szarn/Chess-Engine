@@ -822,7 +822,7 @@ U64 findMagicNum(int square, int relBits, int bishop){
 #define copyBoard() \
     U64 bitboardsCopy[12], occupanciesCopy[3]; \
     int sideCopy, enpassCopy, castleCopy; \
-    memcpy(bitboardsCopy, bitbaords, sizeof(bitboards)); \
+    memcpy(bitboardsCopy, bitboards, sizeof(bitboards)); \
     memcpy(occupanciesCopy, occupancies, sizeof(occupancies)); \
     sideCopy = side, enpassCopy = enpassant, castleCopy = castle;
 
@@ -830,6 +830,56 @@ U64 findMagicNum(int square, int relBits, int bishop){
     memcpy(bitboards, bitboardsCopy, sizeof(bitboards)); \
     memcpy(occupancies, occupanciesCopy, sizeof(occupancies)); \
     side = sideCopy, enpassant = enpassCopy, castle = castleCopy;
+
+
+enum {allMoves, onlyCaptures};
+
+static inline int makeMove(int move, int moveFlag){
+
+    if (moveFlag == allMoves){
+        // perserve state if not valid
+        copyBoard();
+
+        int startSquare = GET_MOVE_START(move);
+        int targetSquare = GET_MOVE_TARGET(move);
+        int piece = GET_MOVE_PIECE(move);
+        int promoted = GET_MOVE_PROMOTED(move);
+        int capture = GET_MOVE_CAPTURE(move);
+        int doublePush = GET_MOVE_DOUBLE(move);
+        int enpass = GET_MOVE_ENPASSANT(move);
+        int castling = GET_MOVE_CASTLING(move);
+
+        // move pieces
+        POP_BIT(bitboards[piece], startSquare);
+        SET_BIT(bitboards[piece], targetSquare);
+
+        if (GET_MOVE_CAPTURE(move)){
+            int startPiece, endPiece;
+
+            startPiece = (side == white ? p : P);
+            endPiece = (side == white ? k : K);
+        
+            for (int bbPiece = startPiece; bbPiece <= endPiece; bbPiece++){
+                if (GET_BIT(bitboards[bbPiece], targetSquare)){
+                    POP_BIT(bitboards[bbPiece], targetSquare);
+                    break;
+                }
+            }
+        }
+
+    } else {
+
+        if (GET_MOVE_CAPTURE(move)){
+            makeMove(move, allMoves);
+        } else return 0;
+
+    }
+
+    return 0;
+}
+
+
+
 
 void genMoves(moves *moveList){
 
@@ -1111,7 +1161,6 @@ void genMoves(moves *moveList){
 }
 
 
-
 void initLeaperAttacks(){
 
     for (int square = 0; square < 64; square++){
@@ -1185,6 +1234,23 @@ int main(){
     fenParse(tricky_pos);
 
     printBoard();
+
+    moves moveList[1];
+
+    genMoves(moveList);
+
+    for (int moveC = 0; moveC < moveList -> count; moveC++){
+        int move = moveList -> moves[moveC];
+        copyBoard();
+
+        makeMove(move, allMoves);
+        printBoard();
+        getchar();
+
+        takeBack();
+        printBoard();
+        getchar();
+    }
 
 
     return 0;
