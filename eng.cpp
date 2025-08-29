@@ -846,7 +846,7 @@ static inline int makeMove(int move, int moveFlag){
         int promoted = GET_MOVE_PROMOTED(move);
         int capture = GET_MOVE_CAPTURE(move);
         int doublePush = GET_MOVE_DOUBLE(move);
-        int enpass = GET_MOVE_ENPASSANT(move);
+        int enpassant = GET_MOVE_ENPASSANT(move);
         int castling = GET_MOVE_CASTLING(move);
 
         // move pieces
@@ -870,6 +870,11 @@ static inline int makeMove(int move, int moveFlag){
         if (promoted){
             POP_BIT(bitboards[(side == white) ? P : p], targetSquare);
             SET_BIT(bitboards[promoted], targetSquare);
+        }
+
+        if (enpassant){
+            (side == white) ? POP_BIT(bitboards[p], targetSquare + 8) 
+            : POP_BIT(bitboards[P], targetSquare - 8);
         }
 
 
