@@ -853,11 +853,11 @@ static inline int makeMove(int move, int moveFlag){
         POP_BIT(bitboards[piece], startSquare);
         SET_BIT(bitboards[piece], targetSquare);
 
-        if (GET_MOVE_CAPTURE(move)){
+        if (capture){
             int startPiece, endPiece;
 
-            startPiece = (side == white ? p : P);
-            endPiece = (side == white ? k : K);
+            startPiece = (side == white ? P : p);
+            endPiece = (side == white ? K : k);
         
             for (int bbPiece = startPiece; bbPiece <= endPiece; bbPiece++){
                 if (GET_BIT(bitboards[bbPiece], targetSquare)){
@@ -867,11 +867,17 @@ static inline int makeMove(int move, int moveFlag){
             }
         }
 
+        if (promoted){
+            POP_BIT(bitboards[(side == white) ? P : p], targetSquare);
+            SET_BIT(bitboards[promoted], targetSquare);
+        }
+
+
     } else {
 
         if (GET_MOVE_CAPTURE(move)){
             makeMove(move, allMoves);
-        } else return 0;
+        }
 
     }
 
