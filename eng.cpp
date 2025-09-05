@@ -1,6 +1,8 @@
 
 #include <iostream>
 #include <cstdint>
+#include <cctype>   
+#include <cstdio> 
 #include <string.h>
 
 typedef unsigned long long  U64;
@@ -14,8 +16,8 @@ typedef unsigned long long  U64;
 #define GET_LEAST_SIG_BIT_IND(bitboard) ((bitboard) ? __builtin_ctzll(bitboard) : -1)
 
 // Move encoders
-#define ENCODE_MOVE(start, target, piece, promoted, capture, double, enpassant, castling) \
-    (start) | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 26) | (double << 21) | \
+#define ENCODE_MOVE(start, target, piece, promoted, capture, doublePush, enpassant, castling) \
+    (start) | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 26) | (doublePush << 21) | \
     (enpassant << 22) | (castling << 23)
 #define GET_MOVE_START(move) (move & 0x3f)
 #define GET_MOVE_TARGET(move) ((move & 0xfc0) >> 6)
@@ -65,21 +67,9 @@ enum {P, N, B, R, Q, K, p, n, b, r, q, k};
 
 const char asciiPieces[13] = "PNBRQKpnbrqk";
 
-const int pieces[] = {
-    ['P'] = P,
-    ['N'] = N,
-    ['B'] = B,
-    ['R'] = R,
-    ['Q'] = Q,
-    ['K'] = K,
-    ['p'] = p,
-    ['n'] = n,
-    ['b'] = b,
-    ['r'] = r,
-    ['q'] = q,
-    ['k'] = k
-};
+int pieces[256];
 
+char promoPieces[13] = {};
 
 const int white = 0;
 const int black = 1;
@@ -100,16 +90,7 @@ static inline void addMove(moves *moveList, int move){
     moveList -> count++;
 }
 
-char promoPieces[] = {
-    [Q] = 'q',
-    [R] = 'r',    
-    [B] = 'b',
-    [N] = 'n',
-    [q] = 'q',
-    [r] = 'r',
-    [b] = 'b',
-    [n] = 'n',
-};
+
 
 void printMove(int move){
     std::cout << coords[GET_MOVE_START(move)];
@@ -1259,6 +1240,33 @@ void initAll(){
     initSliderAttacks(bishop);
     initSliderAttacks(rook);
     //initMagicNum();
+
+    for (int i = 0; i < 256; ++i) {
+        pieces[i] = -1;
+    }
+
+    pieces[(unsigned char)'P'] = P;
+    pieces[(unsigned char)'N'] = N;
+    pieces[(unsigned char)'B'] = B;
+    pieces[(unsigned char)'R'] = R;
+    pieces[(unsigned char)'Q'] = Q;
+    pieces[(unsigned char)'K'] = K; 
+
+    pieces[(unsigned char)'p'] = p;
+    pieces[(unsigned char)'n'] = n;
+    pieces[(unsigned char)'b'] = b;
+    pieces[(unsigned char)'r'] = r;
+    pieces[(unsigned char)'q'] = q;
+    pieces[(unsigned char)'k'] = k;
+
+    promoPieces[Q] = 'q';
+    promoPieces[R] = 'r';
+    promoPieces[B] = 'b';
+    promoPieces[N] = 'n';
+    promoPieces[q] = 'q';
+    promoPieces[r] = 'r';
+    promoPieces[b] = 'b';
+    promoPieces[n] = 'n';
 }
 
 
